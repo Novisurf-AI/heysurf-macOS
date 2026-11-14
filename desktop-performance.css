@@ -1,0 +1,31 @@
+/* Bound the desktop's decorative GPU work. Native AppKit glass is retained;
+   workspace controls use one frosted backdrop pass rather than an SVG lens. */
+html[data-surf-desktop] .bud-glacier::before,
+html[data-surf-desktop] .bud-glacier::after,
+html[data-surf-desktop] .glacier::before,
+html[data-surf-desktop] .glacier::after {
+  animation: none !important;
+  inset: -8%;
+  filter: blur(32px);
+}
+html[data-surf-desktop] .workspace-glass-surface[data-glass='refraction']::before {
+  backdrop-filter: blur(14px) !important;
+  -webkit-backdrop-filter: blur(14px) !important;
+}
+/* Six overlapping filters at each edge repeatedly rasterize scrolling text.
+   Keep a single masked frost pass at each edge. */
+html[data-surf-desktop] .bud-edge-blur > span:not(:first-child) { display: none; }
+html[data-surf-desktop] .bud-edge-blur > span:first-child {
+  backdrop-filter: blur(4px) !important;
+  -webkit-backdrop-filter: blur(4px) !important;
+}
+html[data-surf-desktop] .bud-edge-blur--top > span:first-child {
+  mask-image: linear-gradient(to bottom, black, transparent) !important;
+  -webkit-mask-image: linear-gradient(to bottom, black, transparent) !important;
+}
+html[data-surf-desktop] .bud-edge-blur--bottom > span:first-child {
+  mask-image: linear-gradient(to top, black, transparent) !important;
+  -webkit-mask-image: linear-gradient(to top, black, transparent) !important;
+}
+/* Background raster layers also consume memory before the first chat opens. */
+html[data-surf-desktop] .bud-halloween-mist { animation: none !important; }

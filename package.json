@@ -1,0 +1,39 @@
+{
+  "name": "macos-surf-app",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "main": "main.mjs",
+  "description": "HeySurf for macOS — Electron shell over heysurf.dev with native Liquid Glass",
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-builder --mac --dir",
+    "dist": "electron-builder --mac dmg --arm64",
+    "dist:intel": "electron-builder --mac dmg --x64",
+    "dist:all": "electron-builder --mac dmg zip --arm64 --x64",
+    "test": "node --test tests/*.test.mjs",
+    "profile": "node scripts/profile.mjs",
+    "installer:art": "node scripts/generate-dmg-background.mjs",
+    "icon:build": "node scripts/generate-app-icon.mjs",
+    "check": "node --check main.mjs && node --check permission-policy.mjs && node --check preload.cjs && node --check runtime-policy.mjs && node --check quickask.mjs && node --check quickask-preload.cjs && node --check quickask-stream.mjs && node --check scripts/checksums.mjs",
+    "checksums": "node scripts/checksums.mjs"
+  },
+  "dependencies": {
+    "electron-liquid-glass": "1.1.1",
+    "thinking-orbs": "0.3.2"
+  },
+  "devDependencies": {
+    "electron": "45.3.2",
+    "electron-builder": "26.18.0",
+    "playwright-core": "^1.63.0"
+  },
+  "author": "Novisurf AI",
+  "homepage": "https://heysurf.dev",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Novisurf-AI/heysurf-macOS.git"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
