@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'" />
+<title>HeySurf</title>
+<style>
+  /* Self-contained copy of the app's glacier sky (day palette). */
+  :root {
+    --glacier-top: #7fa2c3; --glacier-upper: #94b5d1; --glacier-middle: #b2cde2;
+    --glacier-lower: #caddec; --glacier-horizon: #d9e8f3;
+    --glacier-cloud: #d8e9f4; --glacier-shade: #5b7fa3; --glacier-mist: #dcecf5;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { height: 100%; }
+  body {
+    position: relative;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
+    -webkit-app-region: drag;
+    user-select: none;
+  }
+  .glacier {
+    position: absolute; inset: 0; overflow: hidden;
+    background: linear-gradient(180deg, var(--glacier-top) 0%, var(--glacier-upper) 28%, var(--glacier-middle) 57%, var(--glacier-lower) 80%, var(--glacier-horizon) 100%);
+  }
+  .glacier::before, .glacier::after {
+    content: '';
+    position: absolute;
+    inset: -28%;
+    filter: blur(clamp(32px, 5vw, 90px));
+  }
+  .glacier::before {
+    background:
+      radial-gradient(ellipse 62% 18% at 22% 43%, color-mix(in srgb, var(--glacier-cloud) 65%, transparent) 0%, transparent 74%),
+      radial-gradient(ellipse 52% 17% at 82% 48%, color-mix(in srgb, var(--glacier-shade) 45%, transparent) 0%, transparent 76%),
+      radial-gradient(ellipse 70% 15% at 42% 66%, color-mix(in srgb, var(--glacier-cloud) 70%, transparent) 0%, transparent 78%);
+    transform: rotate(-1deg);
+    animation: drift 38s ease-in-out -12s infinite alternate;
+  }
+  .glacier::after {
+    background:
+      radial-gradient(ellipse 58% 16% at 64% 37%, color-mix(in srgb, var(--glacier-shade) 40%, transparent) 0%, transparent 75%),
+      radial-gradient(ellipse 50% 17% at 15% 59%, color-mix(in srgb, var(--glacier-cloud) 50%, transparent) 0%, transparent 74%),
+      radial-gradient(ellipse 86% 14% at 55% 76%, color-mix(in srgb, var(--glacier-mist) 40%, transparent) 0%, transparent 80%);
+    transform: translate(4%, -1%) rotate(1deg);
+    animation: mist 51s ease-in-out -28s infinite alternate;
+  }
+  @keyframes drift {
+    0% { transform: translate(-6%, -1%) rotate(-1deg) scale(1.03); }
+    50% { transform: translate(1%, 2%) rotate(0deg) scale(1.06); }
+    100% { transform: translate(7%, 0%) rotate(1.5deg) scale(1.04); }
+  }
+  @keyframes mist {
+    0% { transform: translate(7%, 1%) rotate(1deg) scale(1.05); }
+    50% { transform: translate(-1%, -2%) rotate(0deg) scale(1.02); }
+    100% { transform: translate(-7%, 1%) rotate(-1.5deg) scale(1.06); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .glacier::before, .glacier::after { animation: none; }
+  }
+  main {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 24px;
+    text-align: center;
+    color: #102e3c;
+  }
+  h1 { font-size: 34px; font-weight: 650; letter-spacing: -.02em; }
+  p { font-size: 14px; color: #294b5d; }
+  .mark { width: 96px; height: 95px; margin-bottom: 10px; filter: drop-shadow(0 6px 16px rgb(16 46 60 / .2)); }
+  button {
+    -webkit-app-region: no-drag;
+    margin-top: 14px;
+    height: 44px;
+    padding: 0 26px;
+    border: none;
+    border-radius: 13px;
+    background: #1f45e6;
+    color: #fff;
+    font: inherit;
+    font-size: 15px;
+    font-weight: 550;
+    cursor: pointer;
+    box-shadow: 0 8px 24px rgb(31 69 230 / .35);
+  }
+  button:hover { background: #1a3ccd; }
+  button:active { transform: translateY(1px); }
+</style>
+</head>
+<body>
+  <div class="glacier" aria-hidden="true"></div>
+  <main>
+    <img class="mark" src="build/heysurf-tipped-logo.svg" alt="HeySurf" style="border-radius:23%">
+    <h1>Welcome back!</h1>
+    <p>Sign in on the web to open your workspace.</p>
+    <button id="login" type="button">Continue with Surf Login</button>
+  </main>
+  <script>
+    document.getElementById('login').addEventListener('click', () => {
+      window.surfDesktop?.beginLogin();
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,55 @@
+appId: dev.heysurf.desktop
+productName: HeySurf
+artifactName: HeySurf-${version}-${arch}.${ext}
+directories:
+  output: dist
+files:
+  - main.mjs
+  - preload.cjs
+  - desktop-performance.css
+  - runtime-policy.mjs
+  - login.html
+  - build/heysurf-tipped-logo.svg
+  - quickask-stream.mjs
+  - quickask.mjs
+  - quickask.html
+  - quickask-preload.cjs
+  - package.json
+  - node_modules
+  - '!**/*.map'
+  - '!**/node_modules/electron-liquid-glass/src/**'
+  - '!**/node_modules/electron-liquid-glass/js/**'
+electronLanguages: [en-US]
+# The NSGlassEffectView addon ships a prebuilt .node binary; asar can't host it.
+asarUnpack:
+  - '**/*.node'
+mac:
+  category: public.app-category.productivity
+  target:
+    - target: dmg
+      arch: [arm64, x64]
+    - target: zip
+      arch: [arm64, x64]
+  hardenedRuntime: true
+  entitlements: entitlements.mac.plist
+  entitlementsInherit: entitlements.mac.plist
+  # Drop a 1024px icon at build/icon.icns (auto-detected). Enable once Apple
+  # creds are in env (APPLE_API_KEY, APPLE_API_KEY_ID, APPLE_API_ISSUER):
+  # notarize: true
+protocols:
+  name: heysurf
+  schemes: [heysurf]
+dmg:
+  sign: false
+  title: HeySurf Installer
+  background: build/dmg-background.png
+  iconSize: 128
+  iconTextSize: 16
+  contents:
+    - x: 222
+      y: 310
+      type: file
+    - x: 538
+      y: 310
+      type: link
+      path: /Applications

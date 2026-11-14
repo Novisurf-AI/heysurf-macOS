@@ -1,0 +1,81 @@
+{
+  "baselineRef": "1a9c67e60ff5663e01cc243936ab105e62f112ec",
+  "results": [
+    {
+      "optimized": false,
+      "count": 600,
+      "stress": {
+        "frames": 361,
+        "slowFrames": 0,
+        "maximumRows": 600,
+        "longTasks": 0,
+        "longTaskMs": 0,
+        "elapsedMs": 6002.00000000298,
+        "focused": true,
+        "hidden": false
+      },
+      "retainedHeapMiB": 17.539104461669922,
+      "processes": [
+        {
+          "type": "Browser",
+          "rssMiB": 173.03125,
+          "cpuPercent": 3.3196601132939194
+        },
+        {
+          "type": "GPU",
+          "rssMiB": 120.34375,
+          "cpuPercent": 29.98402199265422
+        },
+        {
+          "type": "Utility",
+          "rssMiB": 52.59375,
+          "cpuPercent": 0.005148283905362384
+        },
+        {
+          "type": "Tab",
+          "rssMiB": 268.125,
+          "cpuPercent": 31.632839053633074
+        }
+      ],
+      "errors": []
+    },
+    {
+      "optimized": true,
+      "count": 600,
+      "stress": {
+        "frames": 362,
+        "slowFrames": 0,
+        "maximumRows": 18,
+        "longTasks": 0,
+        "longTaskMs": 0,
+        "elapsedMs": 6012.300000011921,
+        "focused": true,
+        "hidden": false
+      },
+      "retainedHeapMiB": 9.671222686767578,
+      "processes": [
+        {
+          "type": "Browser",
+          "rssMiB": 173.53125,
+          "cpuPercent": 1.4584268915361194
+        },
+        {
+          "type": "GPU",
+          "rssMiB": 111.109375,
+          "cpuPercent": 7.832293797699156
+        },
+        {
+          "type": "Utility",
+          "rssMiB": 52.59375,
+          "cpuPercent": 0.002145601516886189
+        },
+        {
+          "type": "Tab",
+          "rssMiB": 252.796875,
+          "cpuPercent": 34.76444954503029
+        }
+      ],
+      "errors": []
+    }
+  ]
+}

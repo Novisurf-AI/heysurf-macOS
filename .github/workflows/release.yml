@@ -1,0 +1,82 @@
+name: Draft macOS release
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag (for example v0.2.0)
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            arch: arm64
+            output: mac-arm64
+          - runner: macos-15-intel
+            arch: x64
+            output: mac
+    runs-on: ${{ matrix.runner }}
+    env:
+      RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref_name }}
+      - name: Verify tag and version
+        run: |
+          git show-ref --verify "refs/tags/$RELEASE_TAG"
+          node --input-type=module -e 'import fs from "node:fs"; if(process.env.RELEASE_TAG !== `v${JSON.parse(fs.readFileSync("package.json")).version}`) throw Error("Tag and package version must match");'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - run: npm test
+      - name: Package unsigned DMG and ZIP
+        run: npx electron-builder --mac dmg zip --${{ matrix.arch }} --publish never
+      - name: Test packaged application
+        env:
+          HEYSURF_TEST_EXECUTABLE: ${{ github.workspace }}/dist/${{ matrix.output }}/HeySurf.app/Contents/MacOS/HeySurf
+        run: npm test
+      - uses: actions/upload-artifact@v4
+        with:
+          name: heysurf-${{ matrix.arch }}
+          path: |
+            dist/*.dmg
+            dist/*.zip
+          if-no-files-found: error
+  draft:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref_name }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: heysurf-*
+          path: dist
+          merge-multiple: true
+      - run: npm run checksums
+      - name: Create draft release
+        run: gh release create "$RELEASE_TAG" dist/*.dmg dist/*.zip dist/SHA256SUMS.txt --verify-tag --draft --title "HeySurf $RELEASE_TAG" --notes-file CHANGELOG.md
