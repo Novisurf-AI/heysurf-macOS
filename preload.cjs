@@ -21,3 +21,14 @@ contextBridge.exposeInMainWorld('surfDesktop', {
 window.addEventListener('DOMContentLoaded', () => {
   document.documentElement.dataset.surfDesktop = 'balanced';
 }, { once: true });
+
+// Append outside the app's React root after document load. Recreated for each
+// full navigation; SPA routes retain the same native drag surface.
+window.addEventListener('load', () => {
+  if (document.getElementById('surf-desktop-titlebar')) return;
+  const titlebar = document.createElement('div');
+  titlebar.id = 'surf-desktop-titlebar';
+  titlebar.setAttribute('aria-hidden', 'true');
+  titlebar.title = 'Drag to move window';
+  document.body.append(titlebar);
+}, { once: true });

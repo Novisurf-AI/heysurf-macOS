@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.1
+
+- Add a dedicated draggable top bar to the workspace and sign-in window, with a subtle hover indicator. Reserve its height so controls remain clickable below it.
+- Keep the traffic-light controls and recreate the drag surface on navigation.
+
 ## 0.2.0
 
 First packaged release of the HeySurf macOS desktop app.

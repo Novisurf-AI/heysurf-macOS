@@ -29,9 +29,16 @@ test('desktop keeps one renderer, applies balanced graphics, reopens its workspa
   await page.waitForFunction(() => getComputedStyle(document.querySelector('.bud-glacier'), '::before').animationName === 'none');
   assert.equal(await page.evaluate(() => window.surfDesktop.performanceProfile), 'balanced');
   assert.equal(await page.locator('.workspace-glass-surface').evaluate(el => getComputedStyle(el, '::before').backdropFilter), 'blur(14px)');
+  await page.waitForFunction(() => getComputedStyle(document.querySelector('#surf-desktop-titlebar')).webkitAppRegion === 'drag');
+  assert.equal(await page.locator('#surf-desktop-titlebar').evaluate(el => el.getBoundingClientRect().height), 44);
+  assert.ok(await page.locator('main').evaluate(el => el.getBoundingClientRect().top >= 44), 'titlebar reserves space above workspace controls');
+  await page.locator('#surf-desktop-titlebar').hover();
+  assert.equal(await page.locator('#surf-desktop-titlebar').evaluate(el => getComputedStyle(el).webkitAppRegion), 'drag');
   // A same-origin popup must reuse this renderer.
   await page.evaluate(() => window.open('/account'));
   await page.waitForURL(origin + '/account');
+  await page.locator('#surf-desktop-titlebar').waitFor();
+  assert.equal(await page.locator('#surf-desktop-titlebar').count(), 1, 'navigation recreates one drag surface');
   assert.equal(await desktop.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().length), 1);
   const nextWindow = desktop.waitForEvent('window');
   const closed = page.waitForEvent('close');

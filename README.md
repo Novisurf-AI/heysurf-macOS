@@ -18,6 +18,8 @@ Requires **macOS 13 or later**. Native Liquid Glass is available on macOS 26 and
 
 The command applies only to the installed HeySurf app. Release downloads also include ZIP archives and `SHA256SUMS.txt` for verifying the downloaded files. Updates are installed by replacing the app in Applications; automatic updates are not configured.
 
+The top strip of the desktop window is draggable. Hover it to reveal the grip; the app’s controls remain below the drag area.
+
 ## Quick Ask
 
 Press **Option+Space** to open a compact glass pill on the display under your pointer. Enter sends; Shift+Enter adds a line; Escape dismisses. The panel expands for the answer, keeps the composer editable, and accepts follow-ups while Surf works. Each shortcut invocation opens an empty composer.

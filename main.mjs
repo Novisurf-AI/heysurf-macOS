@@ -201,6 +201,7 @@ function createWindow() {
     minHeight: 600,
     show: false,
     titleBarStyle: 'hiddenInset',
+    movable: true,
     trafficLightPosition: { x: 16, y: 18 },
     transparent: true,
     backgroundColor: '#00000000',
