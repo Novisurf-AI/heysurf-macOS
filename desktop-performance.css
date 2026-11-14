@@ -29,3 +29,16 @@ html[data-surf-desktop] .bud-edge-blur--bottom > span:first-child {
 }
 /* Background raster layers also consume memory before the first chat opens. */
 html[data-surf-desktop] .bud-halloween-mist { animation: none !important; }
+
+/* Reserve native-style chrome above the hosted workspace, so the drag target
+   never covers its buttons, tabs or composer. The titlebar remains draggable
+   while its visual affordance appears only on hover. */
+html[data-surf-desktop] { --surf-titlebar-height: 44px; }
+html[data-surf-desktop] body { padding-top: var(--surf-titlebar-height) !important; box-sizing: border-box; }
+html[data-surf-desktop] :is(.bud-workspace.nvs-agent, .nvs-agent:not(.bud-workspace)) { height: calc(100dvh - var(--surf-titlebar-height)) !important; }
+html[data-surf-desktop] .lilac-agent-loading { min-height: calc(100dvh - var(--surf-titlebar-height)); }
+#surf-desktop-titlebar { position: fixed; inset: 0 0 auto; height: var(--surf-titlebar-height); z-index: 2147483647; -webkit-app-region: drag; user-select: none; background: transparent; transition: background 150ms ease; }
+#surf-desktop-titlebar:hover { background: rgba(127,127,127,.08); }
+#surf-desktop-titlebar::after { content: ''; position: absolute; top: 20px; left: calc(50% - 18px); width: 36px; height: 3px; border-radius: 3px; background: currentColor; opacity: 0; transition: opacity 150ms ease; }
+#surf-desktop-titlebar:hover::after { opacity: .25; }
+@media (prefers-reduced-motion: reduce) { #surf-desktop-titlebar, #surf-desktop-titlebar::after { transition: none; } }
