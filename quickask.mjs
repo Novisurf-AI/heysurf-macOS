@@ -47,6 +47,7 @@ async function follow(run, current) {
   } catch (error) { if (current === generation) showError(error.message || 'Unable to load this answer. Open HeySurf to continue.', true); }
   finally { if (current === generation) { setBusy(false); ask.focus(); } }
 }
+function restoreRejectedQuestion(text) { if (!ask.value) { ask.value = text; updateSend(); } }
 async function submit(event) {
   event?.preventDefault();
   const text = ask.value.trim(); if (!text || admitting) return;
@@ -57,6 +58,7 @@ async function submit(event) {
     const run = await window.quickAsk.ask(text);
     if (base !== generation) return;
     if (!run || run.error) {
+      restoreRejectedQuestion(text);
       showError(run?.message || 'Unable to send. Please try again.', run?.error === 'signin');
       if (!wasBusy) setBusy(false);
       return;
@@ -77,7 +79,7 @@ async function submit(event) {
     answer.textContent = ''; $('q').textContent = text; showError(''); setBusy(true);
     void follow(run, current);
   } catch (error) {
-    if (base === generation) { showError(error.message || 'Unable to send. Please try again.', true); if (!wasBusy) setBusy(false); }
+    if (base === generation) { restoreRejectedQuestion(text); showError(error.message || 'Unable to send. Please try again.', true); if (!wasBusy) setBusy(false); }
   } finally {
     if (request === admissionId) { admitting = false; updateSend(); }
   }

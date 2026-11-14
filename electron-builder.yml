@@ -8,6 +8,7 @@ files:
   - preload.cjs
   - desktop-performance.css
   - runtime-policy.mjs
+  - permission-policy.mjs
   - login.html
   - build/heysurf-tipped-logo.svg
   - quickask-stream.mjs

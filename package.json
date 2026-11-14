@@ -15,7 +15,7 @@
     "profile": "node scripts/profile.mjs",
     "installer:art": "node scripts/generate-dmg-background.mjs",
     "icon:build": "node scripts/generate-app-icon.mjs",
-    "check": "node --check main.mjs && node --check preload.cjs && node --check runtime-policy.mjs && node --check quickask.mjs && node --check quickask-preload.cjs && node --check quickask-stream.mjs && node --check scripts/checksums.mjs",
+    "check": "node --check main.mjs && node --check permission-policy.mjs && node --check preload.cjs && node --check runtime-policy.mjs && node --check quickask.mjs && node --check quickask-preload.cjs && node --check quickask-stream.mjs && node --check scripts/checksums.mjs",
     "checksums": "node scripts/checksums.mjs"
   },
   "dependencies": {

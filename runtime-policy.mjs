@@ -27,3 +27,25 @@ export function isLoginDestination(rawUrl, appOrigin) {
 export function shouldNavigate({ current, pending, target }) {
   return target !== pending && (target !== current || pending !== null);
 }
+
+// Login callbacks are accepted only for a live, app-initiated attempt. The
+// caller consumes the pending attempt before navigating, so tickets cannot replay.
+export function loginCallbackTicket(rawUrl, pending, now = Date.now()) {
+  try {
+    const url = new URL(rawUrl);
+    if (url.protocol !== 'heysurf:' || url.hostname !== 'auth' || url.username || url.password || url.port || !['', '/'].includes(url.pathname)) return null;
+    if (!pending?.state || !Number.isFinite(pending.expiresAt) || pending.expiresAt <= now || url.searchParams.get('state') !== pending.state) return null;
+    return url.searchParams.get('ticket') || null;
+  } catch { return null; }
+}
+
+export function workspaceDeepLink(rawUrl, appOrigin) {
+  try {
+    const url = new URL(rawUrl);
+    if (url.protocol !== 'heysurf:' || !['app', 'account'].includes(url.hostname) || url.username || url.password || url.port) return null;
+    const target = new URL(`/${url.hostname}${url.pathname}${url.search}${url.hash}`, appOrigin);
+    // URL normalization must never turn a generic link into an auth-consume URL.
+    if (target.origin !== new URL(appOrigin).origin || !(target.pathname === '/app' || target.pathname.startsWith('/app/') || target.pathname === '/account' || target.pathname.startsWith('/account/'))) return null;
+    return target.href;
+  } catch { return null; }
+}

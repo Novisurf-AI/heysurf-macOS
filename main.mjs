@@ -1,3 +1,4 @@
+import { createPermissionPolicy } from './permission-policy.mjs';
 import { readQuickAskPage } from './quickask-stream.mjs';
 import { app, BrowserWindow, Menu, dialog, ipcMain, screen, session, shell, globalShortcut } from 'electron';
 import crypto from 'node:crypto';
@@ -6,7 +7,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import liquidGlass from 'electron-liquid-glass';
 import { appendFile, readFile, rename, stat } from 'node:fs/promises';
-import { isLoginDestination, navigationKind, shouldNavigate } from './runtime-policy.mjs';
+import { isLoginDestination, navigationKind, shouldNavigate, loginCallbackTicket, workspaceDeepLink } from './runtime-policy.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -56,7 +57,18 @@ function navigate(target, local = false) {
   }).finally(() => { if (pendingNavigation === target) pendingNavigation = null; });
 }
 
-const allowedPermissions = new Set(['clipboard-read', 'notifications', 'media', 'fullscreen']);
+const permissions = createPermissionPolicy({
+  appOrigin: APP_ORIGIN,
+  isWorkspace: wc => wc === mainWindow?.webContents,
+  prompt: async (permission, types) => {
+    const resource = permission === 'clipboard-read' ? 'read your clipboard' : types.map(type => type === 'audio' ? 'use your microphone' : 'use your camera').join(' and ');
+    const { response } = await dialog.showMessageBox(mainWindow, {
+      type: 'question', message: `Allow HeySurf to ${resource}?`,
+      buttons: ['Deny', 'Allow'], defaultId: 0, cancelId: 0,
+    });
+    return response === 1;
+  },
+});
 
 function applyGlass(win) {
   if (liquidGlass.isGlassSupported()) {
@@ -266,6 +278,7 @@ function createWindow() {
   win.webContents.on('did-finish-load', () => {
     void win.webContents.insertCSS(desktopCSS).catch(() => {});
   });
+  win.webContents.on('did-start-navigation', (_event, _url, _inPlace, isMainFrame) => { if (isMainFrame) permissions.clear(win.webContents); });
   win.on('closed', () => { if (mainWindow === win) { mainWindow = null; pendingNavigation = null; } });
   win.webContents.once('did-finish-load', () => {
     try { applyGlass(win); } catch { logRuntime('native-glass-unavailable'); }
@@ -273,7 +286,7 @@ function createWindow() {
   return win;
 }
 
-async function openWorkspace() {
+async function openWorkspace({ focus = false } = {}) {
   const win = mainWindow || createWindow();
   const loggedIn = await hasSessionCookie();
   if (mainWindow !== win || win.isDestroyed()) return;
@@ -282,17 +295,19 @@ async function openWorkspace() {
   } else if ((!win.webContents.getURL() || win.webContents.getURL() === 'about:blank') && !pendingNavigation) {
     if (loggedIn) showApp(); else showLogin();
   }
+  if (focus && !win.isDestroyed()) {
+    if (win.isMinimized()) win.restore();
+    win.show(); win.focus();
+  }
 }
 
 function handleDeepLink(url) {
-  if (url.startsWith('heysurf://auth')) {
-    // Browser authorize → heysurf://auth?ticket=…&state=… → consume in-window.
-    const query = url.includes('?') ? url.slice(url.indexOf('?') + 1) : '';
-    const params = new URLSearchParams(query);
-    const ticket = params.get('ticket');
-    const state = params.get('state');
+  let parsed;
+  try { parsed = new URL(url); } catch { return; }
+  if (parsed.protocol !== 'heysurf:') return;
+  if (parsed.hostname === 'auth') {
+    const ticket = loginCallbackTicket(url, loginState);
     if (!ticket) return;
-    if (loginState && state !== loginState) return; // CSRF: not our login attempt
     loginState = null;
     const consume = `${APP_ORIGIN}/auth/app/consume?ticket=${encodeURIComponent(ticket)}`;
     if (mainWindow) {
@@ -304,7 +319,8 @@ function handleDeepLink(url) {
     }
     return;
   }
-  const target = `${APP_ORIGIN}/${url.replace(/^heysurf:\/\/?/, '')}`;
+  const target = workspaceDeepLink(url, APP_ORIGIN);
+  if (!target) return;
   if (mainWindow) {
     showApp(target);
     mainWindow.focus();
@@ -340,10 +356,11 @@ if (!gotLock) {
   });
 
   ipcMain.handle('surf:app-version', () => app.getVersion());
-  ipcMain.handle('surf:begin-login', () => {
-    loginState = crypto.randomUUID();
+  ipcMain.handle('surf:begin-login', event => {
+    if (event.sender !== mainWindow?.webContents) return;
+    loginState = { state: crypto.randomUUID(), expiresAt: Date.now() + 10 * 60_000 };
     const device = encodeURIComponent(os.hostname().replace(/\.local$/, ''));
-    const url = `${APP_ORIGIN}/auth/app?device=${device}&state=${loginState}&return=heysurf://auth`;
+    const url = `${APP_ORIGIN}/auth/app?device=${device}&state=${loginState.state}&return=heysurf://auth`;
     void shell.openExternal(url);
   });
   ipcMain.on('surf:auth-state', (_event, signedIn) => {
@@ -395,15 +412,14 @@ if (!gotLock) {
     win.setBounds({ x: b.x, y: Math.round(area.y + (area.height - h) / 2), width: b.width, height: h }, true);
   });
   ipcMain.on('qa:dismiss', () => hideQuickAsk());
-  ipcMain.on('qa:open-app', () => { hideQuickAsk(); void openWorkspace(); });
+  ipcMain.on('qa:open-app', () => { hideQuickAsk(); void openWorkspace({ focus: true }); });
 
   app.whenReady().then(async () => {
     if (process.env.HEYSURF_TEST_MODE === '1' && process.platform === 'darwin') {
       app.setActivationPolicy('prohibited');
     }
-    session.defaultSession.setPermissionRequestHandler((_wc, permission, callback) => {
-      callback(allowedPermissions.has(permission));
-    });
+    session.defaultSession.setPermissionCheckHandler(permissions.check);
+    session.defaultSession.setPermissionRequestHandler(permissions.request);
     // Signing out inside the app drops the session cookies → back to login.
     // Re-check the jar: a single expired cookie can be a mid-rotation blip,
     // so only bail when no session marker remains.

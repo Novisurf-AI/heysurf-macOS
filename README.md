@@ -24,6 +24,8 @@ Press **Option+Space** to open a compact glass pill on the display under your po
 
 Quick Ask uses your shared HeySurf conversation and the normal cloud agent with tools, account limits and permissions. Tool approval and input requests can be continued in the main app. Temporary output interruptions reconnect from the last stream position. Full agent access requires the matching Quick Ask backend to be deployed; installing the desktop app does not deploy the server.
 
+Microphone, camera and clipboard access require consent and are restricted to the hosted workspace origin. Login callbacks require a matching, unexpired login attempt initiated in the desktop app.
+
 ## Develop
 
 Use macOS with Node.js 22 or later:

@@ -172,8 +172,10 @@ test('quick ask panel asks once and expands with the answer', { skip: process.pl
   const root = path.resolve(import.meta.dirname, '..');
   const profile = await mkdtemp(path.join(os.tmpdir(), 'heysurf-quickask-test-'));
   const calls = [], reads = [];
+  let rejectAdmission = false;
   const server = http.createServer((req, res) => {
     if (req.method === 'POST' && req.url === '/api/v1/quick-ask') {
+      if (rejectAdmission) { setTimeout(() => { res.writeHead(403, { 'content-type': 'application/json' }); res.end(JSON.stringify({ error: { message: 'Question rejected' } })); }, 350); return; }
       calls.push({ url: req.url, auth: req.headers.authorization || '' });
       res.setHeader('content-type', 'application/json');
       res.end(JSON.stringify(calls.length === 1 ? { ok: true, runId: 'run-1', threadId: 'shared-thread', cursor: '0-0' } : { steered: true, runId: 'run-1' }));
@@ -250,8 +252,76 @@ test('quick ask panel asks once and expands with the answer', { skip: process.pl
   });
   assert.ok(tall > small && tall <= 480, `panel expanded ${small} -> ${tall}`);
 
+  // Rejected admission restores only an empty input; subsequent drafts survive.
+  rejectAdmission = true;
+  await panel.fill('#ask', 'Rejected question to retry');
+  await panel.press('#ask', 'Enter');
+  await panel.waitForFunction(() => document.querySelector('#ask').value === 'Rejected question to retry');
+  await panel.fill('#ask', 'Another rejected question');
+  await panel.press('#ask', 'Enter');
+  await panel.fill('#ask', 'New draft during admission');
+  await panel.waitForTimeout(450);
+  assert.equal(await panel.locator('#ask').inputValue(), 'New draft during admission');
+  await desktop.evaluate(({ ipcMain }) => {
+    ipcMain.removeHandler('qa:ask');
+    ipcMain.handle('qa:ask', async () => { await new Promise(resolve => setTimeout(resolve, 350)); throw new Error('Admission transport failed'); });
+  });
+  await panel.fill('#ask', 'Thrown question to retry');
+  await panel.press('#ask', 'Enter');
+  await panel.waitForFunction(() => document.querySelector('#ask').value === 'Thrown question to retry');
+  await panel.fill('#ask', 'Another thrown question');
+  await panel.press('#ask', 'Enter');
+  await panel.fill('#ask', 'New draft during thrown request');
+  await panel.waitForTimeout(450);
+  assert.equal(await panel.locator('#ask').inputValue(), 'New draft during thrown request');
+  // Handoff must surface the existing window rather than only dismissing QA.
+  await desktop.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().find(w => !w.webContents.getURL().endsWith('quickask.html')).hide());
+  await panel.evaluate(() => window.quickAsk.openApp());
+  await desktop.evaluate(async ({ BrowserWindow }) => {
+    const deadline = Date.now() + 3000;
+    while (!BrowserWindow.getAllWindows().find(w => !w.webContents.getURL().endsWith('quickask.html'))?.isVisible()) {
+      if (Date.now() > deadline) throw new Error('Workspace stayed hidden after Quick Ask handoff');
+      await new Promise(resolve => setTimeout(resolve, 10));
+    }
+  });
+  // Handoff hid the panel; show it again before testing the two-toggle reset.
+  await desktop.evaluate(({ app }) => app.quickAskToggle());
+
   // One ask only: a fresh invocation resets to an empty composer.
   await desktop.evaluate(({ app }) => { app.quickAskToggle(); app.quickAskToggle(); });
   await panel.waitForSelector('#conversation', { state: 'hidden' });
   assert.equal(await panel.locator('#ask').inputValue(), '');
+});
+
+
+test('desktop login rejects unsolicited, mismatched and replayed callbacks', { skip: process.platform !== 'darwin', timeout: 45_000 }, async t => {
+  const root = path.resolve(import.meta.dirname, '..');
+  const profile = await mkdtemp(path.join(os.tmpdir(), 'heysurf-login-state-'));
+  const requests = [];
+  const server = http.createServer((req, res) => { requests.push(req.url); res.setHeader('content-type', 'text/html'); res.end('<title>Workspace</title>'); });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  t.after(() => { server.closeAllConnections(); server.close(); });
+  const origin = `http://127.0.0.1:${server.address().port}`;
+  const env = { ...process.env, HEYSURF_ORIGIN: origin, HEYSURF_TEST_MODE: '1' }; delete env.ELECTRON_RUN_AS_NODE;
+  const executablePath = process.env.HEYSURF_TEST_EXECUTABLE;
+  const desktop = await _electron.launch({ executablePath, args: [...(executablePath ? [] : [root]), `--user-data-dir=${profile}`], env, cwd: root });
+  t.after(() => desktop.close());
+  const page = await desktop.firstWindow(); await page.waitForURL('**/login.html');
+  const callback = url => desktop.evaluate(({ app }, url) => app.emit('open-url', { preventDefault() {} }, url), url);
+  await callback('heysurf://auth?ticket=unsolicited');
+  await callback('heysurf:///auth/app/consume?ticket=unsolicited');
+  assert.equal(requests.length, 0);
+  await desktop.evaluate(({ shell }) => { shell.openExternal = async url => { globalThis.__loginUrl = url; }; });
+  await page.evaluate(() => window.surfDesktop.beginLogin());
+  const state = new URL(await desktop.evaluate(() => globalThis.__loginUrl)).searchParams.get('state');
+  await callback(`heysurf://auth?state=wrong&ticket=rejected`);
+  assert.equal(requests.length, 0);
+  await callback(`heysurf://auth?state=${state}&ticket=accepted`);
+  await page.waitForURL(origin + '/auth/app/consume?ticket=accepted');
+  await page.goto(origin + '/app');
+  const count = requests.filter(url => url.startsWith('/auth/app/consume')).length;
+  await callback(`heysurf://auth?state=${state}&ticket=replayed`);
+  await page.waitForTimeout(100);
+  assert.equal(requests.filter(url => url.startsWith('/auth/app/consume')).length, count);
+  assert.equal(page.url(), origin + '/app');
 });

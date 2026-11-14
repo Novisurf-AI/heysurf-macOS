@@ -39,3 +39,15 @@ test('connection entry points open in the default browser, including on our own 
     assert.equal(navigationKind(origin + route, origin), 'internal', route);
   }
 });
+
+test('login callbacks require a live matching nonce and an exact auth URL', async () => {
+  const { loginCallbackTicket, workspaceDeepLink } = await import('../runtime-policy.mjs');
+  const pending = { state: 'live-state', expiresAt: 2000 };
+  const url = 'heysurf://auth?state=live-state&ticket=example-ticket';
+  assert.equal(loginCallbackTicket(url, pending, 1000), 'example-ticket');
+  for (const attempt of [null, { state: 'other', expiresAt: 2000 }, { state: 'live-state', expiresAt: 999 }]) assert.equal(loginCallbackTicket(url, attempt, 1000), null);
+  for (const raw of ['heysurf://auth?ticket=example-ticket', 'heysurf://auth/consume?state=live-state&ticket=x', 'https://auth?state=live-state&ticket=x', 'heysurf://user@auth?state=live-state&ticket=x']) assert.equal(loginCallbackTicket(raw, pending, 1000), null);
+  for (const raw of ['heysurf:///auth/app/consume?ticket=x', 'heysurf://auth/app/consume?ticket=x', 'https://app']) assert.equal(workspaceDeepLink(raw, 'https://heysurf.dev'), null);
+  assert.notEqual(workspaceDeepLink('heysurf://app/../auth/app/consume?ticket=x', 'https://heysurf.dev'), 'https://heysurf.dev/auth/app/consume?ticket=x');
+  assert.equal(workspaceDeepLink('heysurf://app?view=tasks', 'https://heysurf.dev'), 'https://heysurf.dev/app?view=tasks');
+});
